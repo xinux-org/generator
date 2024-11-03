@@ -37,6 +37,18 @@ pkgs.stdenv.mkDerivation {
     rust-analyzer
   ];
 
+  # Having hard times nix running from macOS 15 Beta?
+  # add these to your buildInputs:
+  # darwin.apple_sdk.frameworks.Security
+  # darwin.apple_sdk.frameworks.CoreServices
+  # darwin.apple_sdk.frameworks.CoreFoundation
+  # darwin.apple_sdk.frameworks.SystemConfiguration
+  buildInputs = with pkgs; [
+    openssl
+    pkg-config
+    sqlite
+  ];
+
   # Set Environment Variables
   RUST_BACKTRACE = 1;
   NIX_LDFLAGS = "-L${(getLibFolder pkgs.libiconv)} ${darwinOptions}";
