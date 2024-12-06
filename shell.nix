@@ -1,14 +1,19 @@
-{ pkgs ? import <nixpkgs> { } }:
+{
+  pkgs ? import <nixpkgs> { },
+}:
 let
   getLibFolder = pkg: "${pkg}/lib";
   getFramwork = pkg: "${pkg}/Library/Frameworks";
   darwinOptions =
-    if pkgs.stdenv.isDarwin then ''
-      -F${(getFramwork pkgs.darwin.apple_sdk.frameworks.Security)}
-      -F${(getFramwork pkgs.darwin.apple_sdk.frameworks.CoreFoundation)}
-      -F${(getFramwork pkgs.darwin.apple_sdk.frameworks.CoreServices)}
-      -F${(getFramwork pkgs.darwin.apple_sdk.frameworks.SystemConfiguration)}
-    '' else "";
+    if pkgs.stdenv.isDarwin then
+      ''
+        -F${(getFramwork pkgs.darwin.apple_sdk.frameworks.Security)}
+        -F${(getFramwork pkgs.darwin.apple_sdk.frameworks.CoreFoundation)}
+        -F${(getFramwork pkgs.darwin.apple_sdk.frameworks.CoreServices)}
+        -F${(getFramwork pkgs.darwin.apple_sdk.frameworks.SystemConfiguration)}
+      ''
+    else
+      "";
 in
 pkgs.stdenv.mkDerivation {
   name = "generator";
@@ -24,7 +29,7 @@ pkgs.stdenv.mkDerivation {
 
     # Hail the Nix
     nixd
-    nixpkgs-fmt
+    nixfmt-rfc-style
 
     # Launch scripts
     just
