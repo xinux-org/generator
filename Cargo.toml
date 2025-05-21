@@ -5,7 +5,10 @@ edition = "2021"
 license = "MIT"
 homepage = "https://github.com/xinux-org/generator"
 repository = "https://github.com/xinux-org/generator"
-authors = ["Sokhibjon Orzikulov <sakhib@orzklv.uz>"]
+authors = [
+  "Sokhibjon Orzikulov <sakhib@orzklv.uz>",
+  "Victor Fuentes <vlinkz@snowflakeos.org>",
+]
 
 
 [dependencies]

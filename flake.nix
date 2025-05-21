@@ -22,7 +22,6 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        binary = pkgs.callPackage ./. { };
       in
       {
         # Nix script formatter
@@ -32,9 +31,9 @@
         devShells.default = import ./shell.nix { inherit pkgs; };
 
         # Output package
-        packages = {
-          default = binary;
-          generator = binary;
+        packages = rec {
+          default = generator;
+          generator = pkgs.callPackage ./. { };
         };
       }
     );
