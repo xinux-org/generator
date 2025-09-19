@@ -2,11 +2,8 @@
   description = "Nix Database Generator for populating databases";
 
   inputs = {
-    # Too old to work with most libraries
-    # nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
-
     # Perfect!
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+    nixpkgs.url = "github:xinux-org/nixpkgs?ref=nixos-25.05";
 
     # The flake-utils library
     flake-utils.url = "github:numtide/flake-utils";
