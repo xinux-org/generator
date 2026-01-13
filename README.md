@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-    <img align="center" src="https://img.shields.io/github/languages/top/xinux-org/nix-data?style=flat&logo=nixos&logoColor=5277C3&labelColor=ffffff&color=ffffff" alt="Top Used Language">
+    <img align="center" src="https://img.shields.io/github/languages/top/xinux-org/generator?style=flat&logo=nixos&logoColor=5277C3&labelColor=ffffff&color=ffffff" alt="Top Used Language">
     <a href="https://t.me/xinux"><img align="center" src="https://img.shields.io/badge/chat-grey?style=flat&logo=telegram&logoColor=5277C3&labelColor=ffffff&color=ffffff" alt="Telegram Community"></a>
 </p>
 
