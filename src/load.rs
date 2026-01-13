@@ -145,13 +145,9 @@ pub async fn download(mut version: &str, sourcedir: &str) -> Result<()> {
         debug!("Reading packages.json.br");
 
         let pkgjson = resp
-            .text() // ::<NixosPkgList>()
+            .json::<NixosPkgList>() // ::<NixosPkgList>()
             .await
             .expect("Failed to parse request into string");
-
-        fs::write("package.json", &pkgjson)?;
-
-        let pkgjson: NixosPkgList = serde_json::from_str(&pkgjson)?;
 
         debug!("Creating csv data");
         let mut wtr = csv::Writer::from_writer(vec![]);
