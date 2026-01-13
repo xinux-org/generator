@@ -1,51 +1,31 @@
-{
-  pkgs ? import <nixpkgs> { },
-}:
-let
-  getLibFolder = pkg: "${pkg}/lib";
+flake: {pkgs ? import <nixpkgs> {}, ...}: let
+  system = pkgs.hostPlatform.system;
+  base = flake.packages.${system}.default;
 in
-pkgs.stdenv.mkDerivation {
-  name = "generator";
+  pkgs.mkShell {
+    inputsFrom = [base];
 
-  nativeBuildInputs = with pkgs; [
-    # LLVM & GCC
-    gcc
-    cmake
-    gnumake
-    pkg-config
-    llvmPackages.llvm
-    llvmPackages.clang
+    packages = with pkgs; [
+      nixd
+      statix
+      deadnix
+      alejandra
 
-    # Hail the Nix
-    nixd
-    statix
-    deadnix
-    alejandra
+      just
+      just-lsp
 
-    # Launch scripts
-    just
+      clippy
+      rustfmt
+      cargo-watch
+      rust-analyzer
+    ];
 
-    # Rust
-    rustc
-    cargo
-    clippy
-    cargo-watch
-    rust-analyzer
-  ];
+    buildInputs = with pkgs; [
+      openssl
+      pkg-config
+      sqlite
+    ];
 
-  buildInputs = with pkgs; [
-    openssl
-    pkg-config
-    sqlite
-  ];
-
-  # Set Environment Variables
-  RUST_BACKTRACE = 1;
-  NIX_LDFLAGS = "-L${(getLibFolder pkgs.libiconv)}";
-  RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
-  LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
-    pkgs.gcc
-    pkgs.libiconv
-    pkgs.llvmPackages.llvm
-  ];
-}
+    RUST_BACKTRACE = 1;
+    RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
+  }

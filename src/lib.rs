@@ -4,7 +4,7 @@ mod prelude;
 // Exported
 pub use crate::load::download;
 
-use clap::{arg, Parser};
+use clap::{Parser, arg};
 
 #[derive(Parser)]
 pub struct Args {

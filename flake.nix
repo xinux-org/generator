@@ -3,35 +3,35 @@
 
   inputs = {
     # Perfect!
-    nixpkgs.url = "github:xinux-org/nixpkgs?ref=nixos-25.05";
+    nixpkgs.url = "github:xinux-org/nixpkgs?ref=nixos-unstable";
 
-    # The flake-utils library
-    flake-utils.url = "github:numtide/flake-utils";
+    # The flake-parts library
+    flake-parts.url = "github:hercules-ci/flake-parts";
   };
 
-  outputs =
-    {
-      nixpkgs,
-      flake-utils,
-      ...
-    }: # @ inputs:
-    flake-utils.lib.eachDefaultSystem (
-      system:
-      let
-        pkgs = nixpkgs.legacyPackages.${system};
-      in
-      {
+  outputs = {
+    self,
+    flake-parts,
+    ...
+  } @ inputs:
+    flake-parts.lib.mkFlake {inherit inputs;} ({...}: {
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "aarch64-darwin"
+      ];
+      perSystem = {pkgs, ...}: {
         # Nix script formatter
-        formatter = pkgs.nixfmt-rfc-style;
+        formatter = pkgs.alejandra;
 
         # Development environment
-        devShells.default = import ./shell.nix { inherit pkgs; };
+        devShells.default = import ./shell.nix self {inherit pkgs;};
 
         # Output package
         packages = rec {
           default = generator;
-          generator = pkgs.callPackage ./. { };
+          generator = pkgs.callPackage ./. {};
         };
-      }
-    );
+      };
+    });
 }

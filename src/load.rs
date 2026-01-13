@@ -1,34 +1,35 @@
+use crate::prelude::*;
+use anyhow::{Context, Result, anyhow};
+use log::{debug, info};
+use sqlx::{Sqlite, SqlitePool, migrate::MigrateDatabase};
 use std::{
     fs::{self, File},
-    io::{BufReader, Write},
+    io::Write,
     path::Path,
     process::{Command, Stdio},
 };
 
-use crate::prelude::*;
-use anyhow::{anyhow, Context, Result};
-use log::{debug, info};
-use sqlx::{migrate::MigrateDatabase, Sqlite, SqlitePool};
+static UNSTABLE: &str = "https://channels.nixos.org/nixos-unstable";
 
 pub async fn download(mut version: &str, sourcedir: &str) -> Result<()> {
     let verurl = format!("https://channels.nixos.org/{}", version);
     debug!("Checking nixpkgs version");
-    let resp = reqwest::blocking::get(&verurl)?;
+    let resp = reqwest::get(&verurl).await?;
     let latestnixpkgsver = if resp.status().is_success() {
         resp.url()
             .path_segments()
             .context("No path segments found")?
-            .last()
+            .next_back()
             .context("Last element not found")?
             .to_string()
     } else {
-        let resp = reqwest::blocking::get("https://channels.nixos.org/nixos-unstable")?;
+        let resp = reqwest::get(UNSTABLE).await?;
         if resp.status().is_success() {
             version = "unstable";
             resp.url()
                 .path_segments()
                 .context("No path segments found")?
-                .last()
+                .next_back()
                 .context("Last element not found")?
                 .to_string()
         } else {
@@ -53,19 +54,20 @@ pub async fn download(mut version: &str, sourcedir: &str) -> Result<()> {
     }
 
     // Check if latest version is already downloaded
-    if let Ok(prevver) = fs::read_to_string(format!("{}/nixpkgs.ver", sourcedir)) {
-        if prevver == latestpkgsver && Path::new(&format!("{}/nixpkgs.db", sourcedir)).exists() {
-            debug!("No new version of nixpkgs found");
-            return Ok(());
-        }
+    if let Ok(prevver) = fs::read_to_string(format!("{}/nixpkgs.ver", sourcedir))
+        && prevver == latestpkgsver
+        && Path::new(&format!("{}/nixpkgs.db", sourcedir)).exists()
+    {
+        debug!("No new version of nixpkgs found");
+        return Ok(());
     }
 
     let url = format!("https://channels.nixos.org/{}/packages.json.br", version);
 
     // Download file with reqwest blocking
     debug!("Downloading packages.json.br");
-    let client = reqwest::blocking::Client::builder().brotli(true).build()?;
-    let resp = client.get(url).send()?;
+    let client = reqwest::Client::builder().brotli(true).build()?;
+    let resp = client.get(url).send().await?;
     if resp.status().is_success() {
         // resp is pkgsjson
         debug!("Successfully downloaded packages.json.br");
@@ -74,9 +76,11 @@ pub async fn download(mut version: &str, sourcedir: &str) -> Result<()> {
         if Path::new(&format!("{}/nixpkgs.db", sourcedir)).exists() {
             fs::remove_file(format!("{}/nixpkgs.db", sourcedir))?;
         }
+
         debug!("Creating SQLite database");
         Sqlite::create_database(&db).await?;
         let pool = SqlitePool::connect(&db).await?;
+
         sqlx::query(
             r#"
                 CREATE TABLE "pkgs" (
@@ -90,6 +94,7 @@ pub async fn download(mut version: &str, sourcedir: &str) -> Result<()> {
         )
         .execute(&pool)
         .await?;
+
         sqlx::query(
             r#"
             CREATE TABLE "meta" (
@@ -112,6 +117,7 @@ pub async fn download(mut version: &str, sourcedir: &str) -> Result<()> {
         )
         .execute(&pool)
         .await?;
+
         sqlx::query(
             r#"
             CREATE UNIQUE INDEX "attributes" ON "pkgs" ("attribute")
@@ -119,6 +125,7 @@ pub async fn download(mut version: &str, sourcedir: &str) -> Result<()> {
         )
         .execute(&pool)
         .await?;
+
         sqlx::query(
             r#"
             CREATE UNIQUE INDEX "metaattributes" ON "meta" ("attribute")
@@ -126,6 +133,7 @@ pub async fn download(mut version: &str, sourcedir: &str) -> Result<()> {
         )
         .execute(&pool)
         .await?;
+
         sqlx::query(
             r#"
             CREATE INDEX "pnames" ON "pkgs" ("pname")
@@ -135,8 +143,15 @@ pub async fn download(mut version: &str, sourcedir: &str) -> Result<()> {
         .await?;
 
         debug!("Reading packages.json.br");
-        let pkgjson: NixosPkgList =
-            serde_json::from_reader(BufReader::new(resp)).expect("Failed to parse packages.json");
+
+        let pkgjson = resp
+            .text() // ::<NixosPkgList>()
+            .await
+            .expect("Failed to parse request into string");
+
+        fs::write("package.json", &pkgjson)?;
+
+        let pkgjson: NixosPkgList = serde_json::from_str(&pkgjson)?;
 
         debug!("Creating csv data");
         let mut wtr = csv::Writer::from_writer(vec![]);
@@ -144,18 +159,21 @@ pub async fn download(mut version: &str, sourcedir: &str) -> Result<()> {
             wtr.serialize((
                 pkg,
                 data.system.to_string(),
-                data.pname.to_string(),
-                data.version.to_string(),
+                data.pname.clone().unwrap_or_default(),
+                data.version.clone().unwrap_or_default(),
             ))?;
         }
+
         let data = String::from_utf8(wtr.into_inner()?)?;
         debug!("Inserting data into database");
+
         let mut cmd = Command::new("sqlite3")
             .arg("-csv")
             .arg(format!("{}/nixpkgs.db", sourcedir))
             .arg(".import '|cat -' pkgs")
             .stdin(Stdio::piped())
             .spawn()?;
+
         let cmd_stdin = cmd.stdin.as_mut().unwrap();
         cmd_stdin.write_all(data.as_bytes())?;
         let _status = cmd.wait()?;
@@ -164,38 +182,22 @@ pub async fn download(mut version: &str, sourcedir: &str) -> Result<()> {
             metawtr.serialize((
                 pkg,
                 if let Some(x) = data.meta.broken {
-                    if x {
-                        1
-                    } else {
-                        0
-                    }
+                    if x { 1 } else { 0 }
                 } else {
                     0
                 },
                 if let Some(x) = data.meta.insecure {
-                    if x {
-                        1
-                    } else {
-                        0
-                    }
+                    if x { 1 } else { 0 }
                 } else {
                     0
                 },
                 if let Some(x) = data.meta.unsupported {
-                    if x {
-                        1
-                    } else {
-                        0
-                    }
+                    if x { 1 } else { 0 }
                 } else {
                     0
                 },
                 if let Some(x) = data.meta.unfree {
-                    if x {
-                        1
-                    } else {
-                        0
-                    }
+                    if x { 1 } else { 0 }
                 } else {
                     0
                 },
@@ -208,24 +210,15 @@ pub async fn download(mut version: &str, sourcedir: &str) -> Result<()> {
                 data.meta
                     .maintainers
                     .as_ref()
-                    .and_then(|x| match serde_json::to_string(x) {
-                        Ok(x) => Some(x),
-                        Err(_) => None,
-                    }),
+                    .and_then(|x| serde_json::to_string(x).ok()),
                 data.meta.position.as_ref().map(|x| x.to_string()),
                 data.meta
                     .license
                     .as_ref()
-                    .and_then(|x| match serde_json::to_string(x) {
-                        Ok(x) => Some(x),
-                        Err(_) => None,
-                    }),
+                    .and_then(|x| serde_json::to_string(x).ok()),
                 data.meta.platforms.as_ref().and_then(|x| match x {
                     Platform::Unknown(_) => None,
-                    _ => match serde_json::to_string(x) {
-                        Ok(x) => Some(x),
-                        Err(_) => None,
-                    },
+                    _ => serde_json::to_string(x).ok(),
                 }),
             ))?;
         }
@@ -275,7 +268,11 @@ pub async fn download(mut version: &str, sourcedir: &str) -> Result<()> {
 
         let mut wtr = csv::Writer::from_writer(vec![]);
         for (pkg, data) in &pkgjson.packages {
-            wtr.serialize((pkg, data.pname.to_string(), data.version.to_string()))?;
+            wtr.serialize((
+                pkg,
+                data.pname.clone().unwrap_or_default(),
+                data.version.clone().unwrap_or_default(),
+            ))?;
         }
         let data = String::from_utf8(wtr.into_inner()?)?;
         let mut cmd = Command::new("sqlite3")

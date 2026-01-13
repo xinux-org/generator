@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -9,8 +11,8 @@ pub struct NixosPkgList {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct NixosPkg {
-    pub pname: String,
-    pub version: String,
+    pub pname: Option<String>,
+    pub version: Option<String>,
     pub system: String,
     pub meta: Meta,
 }
