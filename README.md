@@ -49,6 +49,16 @@ zed .
 The development environment has whatever you may need already, but feel free to add or remove whatever
 inside `shell.nix`.
 
+### Logging
+
+If you need more detailed logs from `generator`, add RUST_LOG and append whatever type of logs you would need to get, just like that:
+
+```bash
+# You can use debug, error or info instead of generator
+# It just filters logs only from the project itself
+RUST_LOG=generator cargo run -- --ver nixos-unstable --src nixos-unstable
+```
+
 ## Building
 
 Well, there are two ways of building your project. You can either go with classic `cargo build` way, but before that, make sure to enter development environment to have cargo and all rust toolchain available in your PATH, you may do like that:
