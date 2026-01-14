@@ -2,10 +2,10 @@
 /target
 
 # Nix
-result
+/result
 
 # Direnv
-.direnv
+/.direnv
 
 # For booming
 /test
