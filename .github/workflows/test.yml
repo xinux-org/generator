@@ -4,10 +4,10 @@ on: [push, pull_request]
 
 jobs:
   tests:
-    runs-on: self-hosted
+    runs-on: testing
     steps:
       - name: Clone the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Do the flake check
         run: nix flake check --show-trace
