@@ -3,7 +3,7 @@
 
   inputs = {
     # Perfect!
-    nixpkgs.url = "github:xinux-org/nixpkgs?ref=nixos-25.05";
+    nixpkgs.url = "git+https://git.oss.uzinfocom.uz/xinux/nixpkgs?ref=nixos-unstable&shallow=1";
 
     # The flake-utils library
     flake-utils.url = "github:numtide/flake-utils";
