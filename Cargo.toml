@@ -3,8 +3,8 @@ name = "generator"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
-homepage = "https://github.com/xinux-org/generator"
-repository = "https://github.com/xinux-org/generator"
+homepage = "https://git.oss.uzinfocom.uz/xinux/generator"
+repository = "https://git.oss.uzinfocom.uz/xinux/generator"
 authors = [
   "Sokhibjon Orzikulov <sakhib@orzklv.uz>",
   "Victor Fuentes <vlinkz@snowflakeos.org>",
