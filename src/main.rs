@@ -11,7 +11,7 @@ async fn main() {
         Ok(_) => (),
         Err(e) => {
             error!("{}", e);
-            std::process::exit(1);
+            // std::process::exit(1);
         }
     }
 }

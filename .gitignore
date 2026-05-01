@@ -1,2 +1,11 @@
+# Rust
 /target
-result
+
+# Nix
+/result
+
+# Direnv
+/.direnv
+
+# For booming
+/test
